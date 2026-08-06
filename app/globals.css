@@ -1,0 +1,493 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Callisto Vision Studio
+
+   Implements the Claude Design system for the site. The brand book supplies
+   four colours; the design adds a fifth — a near-black navy that sits under
+   Twilight Blue and carries every hero and every dark band. Twilight Blue is
+   demoted to the mid-tone: it holds the marquees and the accent bands, and
+   the deep navy holds the ground.
+
+   Contrast: every foreground/background pair used for text is verified by
+   `npm run contrast`. Add any new pair to scripts/check-contrast.mjs.
+   ========================================================================== */
+
+@theme {
+  /* --- grounds ----------------------------------------------------------- */
+  --color-ink-deep: #0a1730; /* hero + dark sections — the ground      */
+  --color-ink-raised: #12224a; /* raised card on ink-deep (hover)        */
+  --color-twilight: #1c3d7a; /* Twilight Blue — mid-tone bands, type   */
+  --color-twilight-raised: #16325f; /* raised card on twilight (hover)        */
+  --color-doe: #c5a059; /* Doe Brown — the single accent          */
+  --color-snow: #f8f9fa; /* Snow White — light ground              */
+  --color-pure: #ffffff; /* Pure White — alternating light band    */
+
+  /* --- derived, so the four brand values survive at AA -------------------- *
+   * Doe Brown is 4.28:1 on Twilight and 2.33:1 on Snow, so at its brand
+   * value it is a SURFACE and LARGE-TYPE colour only. The deep variant
+   * carries it into body-size text on the light grounds.                    */
+  --color-doe-deep: #8c6d31; /* small text on snow/white (4.58:1)      */
+  --color-doe-light: #caa868; /* small text on twilight (4.66:1)        */
+
+  /* Type tints.
+   *
+   * The design sets these as alpha on the ground — `rgba(248,249,250,.6)` and
+   * so on. Naming them as opaque values is not just tidiness: the SAME alpha
+   * reads differently on ink-deep and on Twilight, and every tint the design
+   * uses on the Twilight band lands under 4.5:1 there. One token that clears
+   * AA on both grounds removes the whole class of bug, and lets the contrast
+   * script see the value it needs to check.
+   *
+   * `mist` is therefore checked against all four dark grounds; `mist-dim` is
+   * ink-deep only, which is the only place it is used. */
+  --color-mist: #a8b0bd; /* on ink-deep 8.16, on twilight 4.81     */
+  --color-mist-dim: #79839a; /* meta text on ink-deep only (4.69:1)    */
+  --color-ink-muted: #55688f; /* body text on snow (4.72:1)             */
+  --color-ink-soft: #3d537d; /* stronger body text on snow (7.05:1)    */
+
+  /* Borders of INTERACTIVE controls must clear 3:1 — WCAG 1.4.11. */
+  --color-edge-dark: #728cbb; /* control border on ink-deep (4.36:1)    */
+  --color-edge-light: #8491a9; /* control border on snow (3.02:1)        */
+  /* Purely decorative hairlines, exempt from 1.4.11. */
+  --color-rule-dark: #2a3c5e;
+  --color-rule-light: #dcdfe5;
+
+  /* --- type -------------------------------------------------------------- */
+  --font-display: var(--font-playfair), "Playfair Display", Georgia, serif;
+  --font-sans: var(--font-montserrat), "Montserrat", ui-sans-serif, system-ui,
+    sans-serif;
+
+  /* --- motion ------------------------------------------------------------ */
+  --ease-brand: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================================================================
+   Sticky chrome
+
+   The header retracts on downward scroll. Anything else that sticks below it
+   has to follow, or it is left hanging with a header-sized hole above it and
+   the page scrolling through the gap. `--header-offset` is the single number
+   that describes where the bottom of the header currently is; the Header
+   component flips `data-header` and every sticky element downstream moves
+   with it.
+   ========================================================================== */
+
+:root {
+  --header-height: clamp(4.125rem, 5.6vw, 5.375rem);
+  --header-offset: var(--header-height);
+}
+
+:root[data-header="hidden"] {
+  --header-offset: 0px;
+}
+
+/* One recipe for every frosted bar, so the header and any sub-nav beneath it
+   read as the same material.
+
+   The alpha is high and the saturation is barely above neutral on purpose:
+   at .88/1.4 — the values the design mocked over a white page — a bar sitting
+   over a warm image picks the colour up and goes two-tone across its width,
+   white on one half and tinted on the other.
+
+   Declared with `@utility` rather than as a plain class in a layer, because
+   the header only wears it once scrolled (`data-[solid=true]:frosted`) and
+   only a real utility composes with a variant — a bare `.frosted` silently
+   produces no rule there, and the bar loses its background entirely. */
+@utility frosted {
+  background-color: color-mix(in srgb, var(--color-snow) 96%, transparent);
+  /* Standard property only. Hand-writing the -webkit- form alongside it makes
+     Lightning CSS drop the unprefixed one and the filter stops applying in
+     every browser that wanted the standard spelling; it adds the prefix
+     itself. */
+  backdrop-filter: saturate(1.1) blur(18px);
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+
+  body {
+    background-color: var(--color-snow);
+    color: var(--color-twilight);
+    font-family: var(--font-sans);
+    font-weight: 400;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: clip;
+  }
+
+  /* Playfair carries a 400–900 weight axis. This design lives at the BOTTOM
+     of it: display type is set at 400 with heavy negative tracking, so the
+     headlines read as drawn letterforms rather than as bold blocks. Weight
+     is never the emphasis device here — the italic and Doe Brown are. */
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+  }
+
+  h1 {
+    letter-spacing: -0.035em;
+    line-height: 0.95;
+  }
+
+  h2 {
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+  }
+
+  /* Emphasis inside a headline: true italic, always in the accent. */
+  h1 em,
+  h2 em,
+  h3 em,
+  blockquote em {
+    font-style: italic;
+    color: var(--color-doe);
+  }
+
+  /* Prices and figures are the product — always tabular. */
+  table,
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-doe);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  /* On the light grounds Doe Brown alone does not clear 3:1 against Snow. */
+  .on-light :focus-visible,
+  .on-light:focus-visible {
+    outline-color: var(--color-doe-deep);
+  }
+
+  ::selection {
+    background: var(--color-doe);
+    color: var(--color-ink-deep);
+  }
+
+  :target {
+    scroll-margin-top: 9rem;
+  }
+
+  section[id] {
+    scroll-margin-top: 7.5rem;
+  }
+}
+
+/* ==========================================================================
+   Structural devices
+
+   The design repeats four of them across every page, so they are named here
+   rather than respelled at each call site.
+   ========================================================================== */
+
+@layer components {
+  /* The label voice. Montserrat 600, wide tracking, 11px. These are short
+     uppercase labels, never running text. */
+  .label {
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Slightly tighter tracking, for labels that sit inside a control. */
+  .label-tight {
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* The pill. Every call to action in the design is one of these. */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    max-width: 100%;
+    border-radius: 9999px;
+    padding: 1.0625rem clamp(1.25rem, 4.6vw, 1.875rem);
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transition:
+      transform 0.5s var(--ease-brand),
+      background-color 0.35s ease,
+      border-color 0.35s ease,
+      color 0.35s ease;
+  }
+
+  /* A pill is `nowrap` so a two-word label never breaks mid-phrase. On a
+     narrow screen that turns into a layout bug rather than a typographic
+     nicety: the pill's min-content width is its whole label on one line, and
+     because a flex item defaults to `min-width: auto` that width becomes the
+     floor for the column holding it. A long label — an email address in the
+     legal pages, "Request a private walkthrough" on /projects — drags the
+     column past the gutter and the page scrolls sideways.
+
+     Below 30rem the label is allowed to wrap, and an unbroken token like an
+     address is allowed to break, which puts min-content back under the
+     viewport. Above it every pill still sits on one line as drawn. */
+  @media (width < 30rem) {
+    .pill {
+      white-space: normal;
+      overflow-wrap: anywhere;
+      text-align: center;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .pill-lift:hover {
+      transform: translateY(-3px);
+    }
+  }
+
+  /* Magnetic hover writes an inline transform every frame (useMagnetic). The
+     pill's own `transition: transform .5s` would then run each of those
+     updates through a half-second easing as well, and the control lags the
+     cursor by exactly that much. While the effect is live, transform leaves
+     the transition list — GSAP is already doing the easing.
+
+     Set as an attribute by the hook rather than a class, because it must only
+     apply on hardware where the hook actually attached. */
+  .pill[data-magnetic="on"] {
+    transition:
+      background-color 0.35s ease,
+      border-color 0.35s ease,
+      color 0.35s ease;
+  }
+
+  /* The full-bleed service row: the ink ground wipes up from the baseline
+     rather than cross-fading in.
+
+     Drawn on a negative-z pseudo-element, which paints above the row's own
+     background but below its text — so the type stays readable throughout the
+     wipe without a second stacking context on every child. `isolation`
+     confines that negative z to this row, so it cannot slide under the
+     section behind it. */
+  .row-wipe {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .row-wipe::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-color: var(--color-ink-deep);
+    transform: scaleY(0);
+    transform-origin: bottom;
+    transition: transform 0.55s var(--ease-brand);
+  }
+
+  .row-wipe:hover::before,
+  .row-wipe:focus-visible::before {
+    transform: scaleY(1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /* No wipe, but the row must still respond — otherwise the hover state
+       reads as broken rather than as calmed down. */
+    .row-wipe::before {
+      transition: none;
+    }
+  }
+
+  /* Underline that draws in from the left. Used on the footer columns and
+     project titles, where a permanent rule would add clutter to a list. */
+  .link-sweep {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 0% 1px;
+    transition:
+      background-size 0.45s var(--ease-brand),
+      color 0.4s ease;
+  }
+
+  .link-sweep:hover,
+  .link-sweep:focus-visible {
+    background-size: 100% 1px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .link-sweep {
+      transition: color 0.4s ease;
+    }
+    .link-sweep:hover,
+    .link-sweep:focus-visible {
+      text-decoration: underline;
+      background-size: 0% 1px;
+    }
+  }
+
+  /* The ghost numeral — the oversized, near-transparent figure the design
+     sets behind a card or a section heading.
+
+     Drawn as generated content rather than as a text node. At 14% it is
+     texture, and no tint that faint can meet a text contrast threshold — nor
+     should it need to, because nothing is meant to read it. Generated content
+     is presentational by definition, which states that intent to an auditor
+     instead of leaving a 1.2:1 text node behind an aria-hidden and hoping.
+
+     Where the number carries real ordering information, the markup carries it
+     too: those lists are <ol>, so the sequence survives without the figure. */
+  .numeral-ghost::before {
+    content: attr(data-numeral);
+  }
+
+  /* The hairline grid.
+
+     The design draws its card grids with `gap: 1px` over an inset
+     box-shadow rather than borders, so adjacent cards share one hairline
+     instead of doubling it — and the rule survives `auto-fit` reflow, where
+     a border-based grid leaves a stray edge at the end of a short row. */
+  .rule-grid {
+    display: grid;
+    gap: 1px;
+  }
+
+  .rule-cell-dark {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-snow) 14%, transparent);
+  }
+
+  .rule-cell-light {
+    box-shadow: 0 0 0 1px
+      color-mix(in srgb, var(--color-twilight) 14%, transparent);
+  }
+}
+
+/* ==========================================================================
+   Motion
+
+   GSAP owns the reveal timelines (components/motion). CSS supplies only the
+   pre-paint hidden state for above-the-fold elements, gated on
+   [data-js="on"] so that with JavaScript disabled everything renders visible
+   rather than being stranded at opacity 0. The marquee is pure CSS: it runs
+   forever and has no scroll dependency, so a keyframe animation is cheaper
+   than a tween.
+   ========================================================================== */
+
+@layer utilities {
+  [data-js="on"] [data-anim-hero] {
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-js="on"] [data-anim-hero] {
+      opacity: 1;
+    }
+  }
+
+  @keyframes cvs-marquee {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(-50%, 0, 0);
+    }
+  }
+
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: cvs-marquee var(--marquee-duration, 40s) linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-track {
+      animation: none;
+    }
+  }
+
+  /* The GSAP loop takes the band over on mount so it can respond to scroll
+     velocity (components/motion/Marquee). Both drive `transform`, so the CSS
+     animation has to stop or it would keep overwriting the tween every frame
+     and the band would sit still. The attribute is only ever set once GSAP
+     has read the CSS animation's clock and seeded itself at the same
+     progress, so the handover has no visible step. */
+  .marquee-track[data-gsap="on"] {
+    animation: none;
+  }
+
+  /* SplitText builds one clipping wrapper per line for the masked reveal. Its
+     height is the line box, and Playfair's descenders — g, y, p, and the
+     italic in every accent phrase — hang below that, so they are shaved off
+     while a heading is at rest. The padding gives the mask somewhere to put
+     them; the equal negative margin means the extra height never reaches the
+     layout, so headings keep the leading the design specified. */
+  .split-line-mask {
+    padding-bottom: 0.14em;
+    margin-bottom: -0.14em;
+  }
+
+  /* The mobile panel's nav walks in instead of arriving as one block.
+     Pure CSS: the panel is toggled by the `hidden` attribute, so the
+     animation replays every time it is shown without any JS to restart it. */
+  @keyframes cvs-panel-item {
+    from {
+      opacity: 0;
+      transform: translateY(1.25rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .panel-item {
+      animation: cvs-panel-item 0.55s var(--ease-brand) both;
+      animation-delay: calc(var(--panel-index, 0) * 70ms + 60ms);
+    }
+  }
+
+  /* Fluid page gutter and the 1600px measure the design holds everywhere. */
+  .shell {
+    max-width: 100rem;
+    margin-inline: auto;
+    padding-inline: clamp(1.25rem, 3.4vw, 3rem);
+  }
+}
